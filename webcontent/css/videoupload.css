@@ -1,0 +1,22 @@
+.pispower_video_upload_wrapper {
+	position: relative;
+}
+.pispower_video_upload_button {
+	cursor : pointer;
+}
+.pispower_video_upload_invisible {
+	position: absolute !important;
+	clip: rect(1px 1px 1px 1px);	/* for IE */
+	clip: rect(1px,1px,1px,1px);
+}
+.pispower_upload_progress {
+	background-color: #E5E5E5;
+	margin-top: 4px;
+	margin-bottom : 4px;
+	width: 95%;
+}
+.pispower_upload_progress_bar {
+	background-color: #0099FF;
+	height: 3px;
+	width: 1px;
+}

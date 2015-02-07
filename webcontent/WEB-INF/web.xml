@@ -1,0 +1,46 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<web-app xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns="http://java.sun.com/xml/ns/javaee"
+	xmlns:web="http://java.sun.com/xml/ns/javaee/web-app_2_5.xsd" xsi:schemaLocation="http://java.sun.com/xml/ns/javaee http://java.sun.com/xml/ns/javaee/web-app_2_5.xsd"
+	id="WebApp_ID" version="2.5">
+	<display-name>Upload5 demo</display-name>
+
+	<servlet>
+		<display-name>SignServlet</display-name>
+		<servlet-name>SignServlet</servlet-name>
+		<servlet-class>com.pispower.video.upload.SignServlet</servlet-class>
+	</servlet>
+	<servlet-mapping>
+		<servlet-name>SignServlet</servlet-name>
+		<url-pattern>/sign</url-pattern>
+	</servlet-mapping>
+	
+	<servlet>
+		<display-name>CallbackListenerServlet</display-name>
+		<servlet-name>CallbackListenerServlet</servlet-name>
+		<servlet-class>com.pispower.video.upload.CallbackListenerServlet</servlet-class>
+	</servlet>
+	<servlet-mapping>
+		<servlet-name>CallbackListenerServlet</servlet-name>
+		<url-pattern>/callback</url-pattern>
+	</servlet-mapping>
+	
+	<welcome-file-list>
+		<welcome-file>/index.jsp</welcome-file>
+	</welcome-file-list>
+
+	<error-page>
+		<error-code>404</error-code>
+		<location>/error.jsp</location>
+	</error-page>
+
+	<error-page>
+		<error-code>400</error-code>
+		<location>/error.jsp</location>
+	</error-page>
+	
+	<error-page>
+		<error-code>500</error-code>
+		<location>/error.jsp</location>
+	</error-page>
+
+</web-app>

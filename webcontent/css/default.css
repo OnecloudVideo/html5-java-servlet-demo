@@ -1,0 +1,21 @@
+body{font-size:12px; color:#333; font-family:Arial,"微软雅黑", Helvetica, sans-serif;line-height:1; margin:0; padding:0;}
+table{ border-collapse:collapse;}a{ color:#333; text-decoration:none;}
+a:hover{color:#23b1dc; text-decoration:underline;}
+.but_add{display:inline-block; height:26px; background:#5088c7; padding:0px 20px 0px 20px;;margin-right:5px; line-height:26px; color:#fff;font-size:12px; font-weight:100; border:0; vertical-align:middle; cursor:pointer;}
+.but_add:hover{ color:#FC0; cursor:pointer;}
+.btn_back{border:1px solid #ccc; text-align:center; padding:5px 15px 5px 15px; background:#f0f0f0; font-size:12px; font-weight:normal;}
+.select_long{width:188px; height:26px; margin-right:5px; line-height:26px; padding:2px 0;  vertical-align:middle;  border:1px solid #CCC;}
+.con_box{width:1000px; margin:0 auto 0 auto; border:#e8e8e8 1px solid; padding:0 20px 0 20px; background:#fafafa;}
+.con_box_logo{background:url(images/logo.png) no-repeat bottom 20px right 10px; height:98px; margin-top:20px;}
+.con_box h1{text-align:center; margin-top:30px;}
+.con_box h2{color:#405c84; font-size:16px; line-height:25px; margin-top:25px;}
+.info_box{background:#f0f0f0; border:1px #CCCCCC dashed; line-height:35px; text-align:center;}
+.line{border-bottom:#999 dotted 1px;}
+.link{color:#F90; text-decoration:underline;}
+.txt_right{ float:right; line-height:26px;}
+.mar10{margin-right:10px;}
+.fr{ float:right;}
+
+.table2 {margin-top:10px;}
+.table2 th{text-align:left; padding-left:10px; height:35px; font-size:14px; border:1px #cdcdcd solid; background:#eee;}
+.table2 td{padding-left:10px; border-bottom:1px #cdcdcd solid; border:1px #cdcdcd solid; height:35px; font-size:12px; line-height:26px;}
