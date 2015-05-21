@@ -146,22 +146,26 @@ var VideoUpload = (function($) {
 				for (var fileIndex = 0, file; file = $fileInput.files[fileIndex++];) {
 					if (file.size > settings.limitSize) {
 						handlers.onSelectError(file.name, 'FILE_TOO_BIG');
+						$this.val('');
 						return false;
 					}
 					if (file.size == 0) {
 						handlers.onSelectError(file.name, 'FILE_ZERO');
+						$this.val('');
 						return false;
 					}
 					var matches = file.name.toLowerCase().match(/(\.[^.]+)$/);
 					var ext = matches && matches[1] || "";
 					if ($.inArray(ext, settings.accept) < 0) {
 						handlers.onSelectError(file.name, 'FORMAT_NOT_SUPPORT');
+						$this.val('');
 						return false;
 					}
 				}
 				if ($fileInput.files.length > 0) {
 					handlers.onSelect($fileInput);
 				}
+				$this.val('');
 			});
 
 			// 判断浏览器是否支持html5的File api
