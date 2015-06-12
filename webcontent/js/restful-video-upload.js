@@ -14,7 +14,7 @@
 
 var VideoUpload = (function($) {
 	'use strict';
-	
+
 	/**
 	 * for IE, empty console.log
 	 */
@@ -46,71 +46,78 @@ var VideoUpload = (function($) {
 
 		// 限制上传文件的大小, 单位字节, 默认200MB。建议不要过大，文件过大会造成合并文件超时。
 		limitSize : 200 * 1024 * 1024,
-		
+
 		// 上传文件块的大小, 单位字节, 默认2MB
 		chunkSize : 2 * 1024 * 1024,
 
 		// 亦云视频接受的文件上传的格式。用户可以配置为这个集合的子集，不能添加其他格式。
-		accept : [ '.avi', '.flv', '.mp4', '.mpeg', '.mpg', '.wmv', '.mkv', '.mts', '.wav', '.flac', 
-		           '.ape', '.mp3', '.wma', '.m4a', '.aac' ],
+		accept : [ '.avi', '.flv', '.mp4', '.mpeg', '.mpg', '.wmv', '.mkv', '.mts', '.wav', '.flac', '.ape', '.mp3',
+				'.wma', '.m4a', '.aac' ],
 
 		/*
 		 * 设置上传文件的分类id, 可选, 没有指定则为'默认'分类。可以利用亦云视频关于分类的restful api查询分类的id。
 		 * 若在初始化时不确定，可以在uploader中调用setCatalogId()设置。
 		 */
 		catalogId : '',
-		
+
 		// 选择文件后触发
 		onSelect : function() {
 		},
-		
+
 		// 更新文件上传进度
 		onProgress : function(fileItem, percentage) {
 		},
-		
+
 		// 文件上传成功后触发
 		onUploadComplete : function(fileItem) {
 		},
-		
+
 		// 文件列表上传完成后触发
 		onQueueComplete : function() {
 		},
-		
-		// 文件开始上传时触发
+
+		// 文件开始扫描时触发
+		onStart : function(fileItem) {
+		},
+
+		// 文件扫描完，正式开始上传时触发
 		onUploadStart : function(fileItem) {
 		},
-		
+
 		// 文件上传出错时触发
 		onUploadError : function(fileItem) {
 		}
 	}; // end of settings
-	
+
 	// 亦云视频的域名
 	var videoApiDomain = "https://video.pispower.com";
-	
+
 	// 默认配置, 不可修改
 	var defaultSettings = {
-			
+
 		// 亦云视频断点续传的restful api
 		// 查询文件是否已经初始化
 		listUrl : videoApiDomain + "/video/multipartUpload/list.api",
-		
+
 		// 初始化断点续传
 		initUrl : videoApiDomain + "/video/multipartUpload/init.api",
-		
+
 		// 上传文件分块
 		uploadPartUrl : videoApiDomain + "/video/multipartUpload/uploadPart.api",
-		
+
 		// 查询已经上传成功的文件分块
 		getPartsUrl : videoApiDomain + "/video/multipartUpload/getParts.api",
-		
+
 		// 上传完成, 通知亦云视频合并文件
 		completeUrl : videoApiDomain + "/video/multipartUpload/complete.api",
-		
+
+		// 删除错误文件分片
+		deletePartsUrl : videoApiDomain + '/video/multipartUpload/deleteParts.api',
+
 		// 查询分类
 		getClassifyUrl : videoApiDomain + "/catalog/list.api",
-		
-		// 上传文件的引用数组, 内部变量, 
+
+		// 上传文件的引用数组, 内部变量,
 		fileItemQueue : []
 	};
 
@@ -143,30 +150,43 @@ var VideoUpload = (function($) {
 			$fileElement.unbind("change").change(function() {
 				var $this = $(this);
 				var $fileInput = $this[0];
+				if ($fileInput.files.length > 5) {
+					alert("一次只能上传5个文件，请减少上传的文件。");
+					$this.val("");
+					return false;
+				}
+
+				var hasError = false, msg = "";
 				for (var fileIndex = 0, file; file = $fileInput.files[fileIndex++];) {
 					if (file.size > settings.limitSize) {
-						handlers.onSelectError(file.name, 'FILE_TOO_BIG');
-						return false;
+						msg += handlers.onSelectError(file.name, 'FILE_TOO_BIG');
+						hasError = true;
 					}
 					if (file.size == 0) {
-						handlers.onSelectError(file.name, 'FILE_ZERO');
-						return false;
+						msg += handlers.onSelectError(file.name, 'FILE_ZERO');
+						hasError = true;
 					}
 					var matches = file.name.toLowerCase().match(/(\.[^.]+)$/);
 					var ext = matches && matches[1] || "";
 					if ($.inArray(ext, settings.accept) < 0) {
-						handlers.onSelectError(file.name, 'FORMAT_NOT_SUPPORT');
-						return false;
+						msg += handlers.onSelectError(file.name, 'FORMAT_NOT_SUPPORT');
+						hasError = true;
 					}
 				}
+				if (hasError) {
+					alert(msg);
+					$this.val("");
+					return false;
+				}
+
 				if ($fileInput.files.length > 0) {
 					handlers.onSelect($fileInput);
 				}
+				$this.val("");
 			});
 
 			// 判断浏览器是否支持html5的File api
-			if (window.File && window.Blob && window.FileReader && window.FormData 
-					&& Uint8Array.prototype.subarray) {
+			if (window.File && window.Blob && window.FileReader && window.FormData && Uint8Array.prototype.subarray) {
 				return HTML5Uploader;
 			} else {
 				$button.attr("title", "你的浏览器不支持HTML5上传，请使用IE 10+、Chrome 11+和Firefox 4+。");
@@ -178,7 +198,7 @@ var VideoUpload = (function($) {
 
 	var HTML5Uploader = {
 		upload : function() {
-			handlers.onUploadStart();
+			handlers.onStart();
 		},
 		// 设置上传文件的分类id, 可选, 没有指定则为'默认'分类。
 		setCatalogId : function(catalogId) {
@@ -193,7 +213,7 @@ var VideoUpload = (function($) {
 				param.sign = sdata.sign;
 				$.get(settings.getClassifyUrl, param, function(data) {
 					if (data.statusCode != 0) {
-						console.log("get classify fail");
+						// console.log("get classify fail");
 						fail();
 					} else {
 						success(data);
@@ -258,7 +278,7 @@ var VideoUpload = (function($) {
 		onUploadComplete : function(fileItem) {
 			settings.onUploadComplete(fileItem);
 			fileItem = null;
-			this.onUploadStart();
+			this.onStart();
 		},
 		/**
 		 * 当所有文件上传完成后, 清空文件列表
@@ -268,16 +288,22 @@ var VideoUpload = (function($) {
 			settings.onQueueComplete();
 		},
 		/**
-		 * 选择队列中的第一个开始上传
+		 * 单个文件开始上传
 		 */
-		onUploadStart : function() {
+		onStart : function() {
 			if (settings.fileItemQueue.length > 0) {
 				var fileItem = settings.fileItemQueue.shift();
+				settings.onStart(fileItem);
 				md5sum(fileItem, uploadFile);
-				settings.onUploadStart(fileItem);
 			} else {
 				this.onQueueComplete();
 			}
+		},
+		/**
+		 * 单个文件扫描完，正式开始上传
+		 */
+		onUploadStart : function(fileItem) {
+			settings.onUploadStart(fileItem);
 		},
 		/**
 		 * 上传文件时出错, 删除文件上传信息, 显示上传出错
@@ -292,23 +318,25 @@ var VideoUpload = (function($) {
 		 */
 		onCancel : function() {
 			settings.fileItemQueue = [];
-			// TODO 
+			// TODO
 		},
 		/**
 		 * 处理选择文件出错的情况
 		 */
 		onSelectError : function(fileName, errorCode) {
+			var msg = "";
 			switch (errorCode) {
 			case 'FILE_TOO_BIG':
-				alert("文件：" + fileName + "超过200MB，请使用FTP上传。");
+				msg = "文件：" + fileName + "超过200MB，请使用FTP上传。";
 				break;
 			case 'FILE_ZERO':
-				alert("文件：" + fileName + "大小为0，请上传正确的文件。");
+				msg = "文件：" + fileName + "大小为0，请上传正确的文件。";
 				break;
 			case 'FORMAT_NOT_SUPPORT':
-				alert("请选择以下格式的文件：\n" + settings.accept.toString());
+				msg = "请选择以下格式的文件：\n" + settings.accept.toString();
 				break;
 			}
+			return msg;
 		}
 	}; // end of handlers
 
@@ -324,7 +352,7 @@ var VideoUpload = (function($) {
 	 */
 	function md5sum(fileItem, success) {
 		var file = fileItem.nativeFile;
-		console.log(file.name + ", " + file.size);
+		// console.log(file.name + ", " + file.size);
 		var spark = new SparkMD5.ArrayBuffer();
 		var fileReader = new FileReader();
 
@@ -341,10 +369,11 @@ var VideoUpload = (function($) {
 				readNext();
 			} else {
 				var md5String = spark.end();
-				console.log("md5 : " + md5String);
+				// console.log("md5 : " + md5String);
 				spark.destroy();
 				fileReader = null;
 				$fileItem = null;
+				handlers.onUploadStart(fileItem);
 				success(fileItem, md5String);
 			}
 		}
@@ -362,20 +391,21 @@ var VideoUpload = (function($) {
 	 * 计算参数签名sign函数, 成功后调callback
 	 */
 	function getSign(formData, callback) {
-		$.post(settings.signUrl, formData, function(data, status, jqXHR) {
+		$.post(settings.signUrl, formData, function(data, status) {
 			if (status == "success") {
 				callback(data);
 			} else {
-				console.log("get sign fail")
-				console.log(jqXHR);
+				// console.log("get sign fail")
+				// console.log(jqXHR);
+				throw new Error("can't get sign");
 			}
 		});
 	}
 
 	/**
-	 * 文件分块信息对象，记录文件分块的序号和md5值。
-	 * 根据亦云视频断点续传的api, 每上传完一个文件分块, 即会返回一个partKey和partMD5用以标识这个分块和验证上传的文件分块是否正确。
-	 * 但并不会返回这个分块的序号, 因此用户需要自己记录分块的序号。同时，上传成功后，要记录这个分块的partKey。
+	 * 文件分块信息对象，记录文件分块的序号和md5值。 根据亦云视频断点续传的api, 每上传完一个文件分块,
+	 * 即会返回一个partKey和partMD5用以标识这个分块和验证上传的文件分块是否正确。 但并不会返回这个分块的序号,
+	 * 因此用户需要自己记录分块的序号。同时，上传成功后，要记录这个分块的partKey。
 	 */
 	function ChunkInfo(md5, partNum) {
 		this.md5 = md5;
@@ -424,28 +454,25 @@ var VideoUpload = (function($) {
 		 * 断点续传之前, 查询这个文件是否已经初始化。若是, 则进一步查询文件上传的进度进行续传; 否则, 进行初始化上传
 		 */
 		function startUpload() {
-			console.log(chunkArray);
-
+			// console.log(chunkArray);
 			getSign({
-				fileNameLike : fileItem.fileName,
 				fileMD5Equal : md5String
 			}, function(edata) {
-				console.log(edata);
+				// console.log(edata);
 				$.get(settings.listUrl, {
-					fileNameLike : fileItem.fileName,
 					fileMD5Equal : md5String,
 					accessKey : edata.accessKey,
 					time : edata.time,
 					sign : edata.sign
 				}, function(data) {
-					console.log(data);
+					// console.log(data);
 					if (data.multipartUploads.length == 0) {
 						initUpload();
-					} else if (data.multipartUploads.length > 1) {
-						console.log("continue upload same files");
-					} else {
+					} else if (data.multipartUploads.length == 1) {
 						fileItem.uploadId = data.multipartUploads[0].uploadId;
 						continueUpload();
+					} else {
+						// console.log("continue upload same files");
 					}
 				});
 			});
@@ -477,6 +504,28 @@ var VideoUpload = (function($) {
 		}
 
 		/**
+		 * XXX should upload in queue
+		 */
+		function updateTransferProgress() {
+			var obj = {};
+			var uploadedBytes = 0;
+			obj.updateProgress = function(e) {
+				if (e.lengthComputable) {
+					var percentage = ((uploadedBytes + e.loaded) / file.size) * 100;
+					handlers.onProgress(fileItem, percentage);
+				}
+			};
+			obj.addUploaded = function(uploaded) {
+				uploadedBytes += uploaded;
+			}
+			return obj;
+		}
+
+		var progressUpdater = updateTransferProgress();
+
+		var serverInfo = [];
+
+		/**
 		 * 计算上次断开的分块进行续传
 		 */
 		function continueUpload() {
@@ -494,13 +543,32 @@ var VideoUpload = (function($) {
 						return false;
 					}
 					// 从亦云视频查询上传完成的分块，与本地文件分块比较，找到断开的那个分块的序号
-					var serverInfo = data.uploadedParts;
+					serverInfo = data.uploadedParts;
+					// console.log("uploaded parts..." + serverInfo);
+					if (!serverInfo.length) {
+						uploadChunk();
+						return;
+					}
+					// 记录服务器上错误的 partKey，有可能是因为上传到一半，有可能是因为改变了大小导致不一致。
+					var errorParts = $.map(serverInfo, function(ele) {
+						return ele.partKey;
+					});
+
+					// console.log(serverInfo);
 					var parts = [];
 					for (var k = 0, clen = chunkArray.length; k < clen; k++) {
 						for (var j = 0, slen = serverInfo.length; j < slen; j++) {
-							if (serverInfo[j].partMD5 == chunkArray[k].md5) {
+							var serverChunk = serverInfo[j];
+							if (serverChunk.partMD5 == chunkArray[k].md5
+							// 服务器 1 base, 当前算法 0 base
+							&& serverChunk.partNumber == (chunkArray[k].partNum + 1)) {
 								chunkArray[k].partKey = serverInfo[j].partKey;
 								uploadInfoStorage.push(chunkArray[k]);
+								// 如果服务器上的正确，从错误里删除
+								errorParts = $.map(errorParts, function(ele) {
+									if (ele != serverChunk.partKey)
+										return ele;
+								});
 								break;
 							}
 							if (j == slen - 1) {
@@ -508,20 +576,49 @@ var VideoUpload = (function($) {
 							}
 						}
 					}
-					console.log(parts);
-					chunkArray = parts;
-					if (chunkArray.length > 0) {
-						uploadChunk();
+
+					// 删除错误的块
+					if (errorParts.length) {
+						console.log("erro parts..." + errorParts);
+						var partKeys = errorParts.toString();
+						getSign({
+							partKeys : partKeys
+						}, function(edata) {
+							$.post(settings.deletePartsUrl, {
+								partKeys : partKeys,
+								accessKey : edata.accessKey,
+								time : edata.time,
+								sign : edata.sign
+							}, function(data) {
+								if (data.statusCode != 0) {
+									handlers.onUploadError(fileItem);
+									return false;
+								}
+
+								chunkArray = parts;
+								if (chunkArray.length) {
+									progressUpdater.addUploaded(uploadInfoStorage.length * settings.chunkSize);
+									uploadChunk();
+								} else {
+									uploadComplete();
+								}
+							});
+						});
 					} else {
-						uploadComplete();
+						chunkArray = parts;
+						if (chunkArray.length) {
+							progressUpdater.addUploaded(uploadInfoStorage.length * settings.chunkSize);
+							uploadChunk();
+						} else {
+							uploadComplete();
+						}
 					}
 				});
 			});
 		}
 
 		/**
-		 * 上传一块。
-		 * 每上传完一块，亦云视频会返回接收到的文件分块的md5，然后判断与刚才上传的文件分块是否一致。
+		 * 上传一块。 每上传完一块，亦云视频会返回接收到的文件分块的md5，然后判断与刚才上传的文件分块是否一致。
 		 * 若一致，则表明分块上传成功；否则，将分块重新放回队列中。
 		 * 同时亦云视频会返回文件分块的partKey，必须要记录下来，用于最后合并文件的验证。
 		 */
@@ -529,10 +626,10 @@ var VideoUpload = (function($) {
 			var chunkInfo = chunkArray.shift();
 			var currentChunk = chunkInfo.partNum;
 
-			console.log("upload chunk : " + currentChunk);
+			// console.log("upload chunk : " + currentChunk);
 			var formData = new FormData();
 			formData.append("uploadId", fileItem.uploadId);
-			formData.append("partNumber", (currentChunk + 1));	// 亦云视频的分块序号是从1开始，而这里是从0开始，因此要+1
+			formData.append("partNumber", (currentChunk + 1)); // 亦云视频的分块序号是从1开始，而这里是从0开始，因此要+1
 
 			var begin = currentChunk * settings.chunkSize;
 			var end = ((begin + settings.chunkSize) > file.size) ? file.size : (begin + settings.chunkSize);
@@ -551,6 +648,11 @@ var VideoUpload = (function($) {
 					data : formData,
 					processData : false,
 					contentType : false,
+					xhr : function() {
+						var xhr = new window.XMLHttpRequest();
+						xhr.upload.addEventListener('progress', progressUpdater.updateProgress, false);
+						return xhr;
+					},
 					success : function(data, status, jqXHR) {
 						if (data.statusCode != 0) {
 							handlers.onUploadError(fileItem);
@@ -562,15 +664,13 @@ var VideoUpload = (function($) {
 						} else {
 							chunkInfo.partKey = data.partKey;
 							uploadInfoStorage.push(chunkInfo);
-
-							var percentage = Math.round(((currentChunk + 1) / chunks) * 100);
-							handlers.onProgress(fileItem, percentage);
+							progressUpdater.addUploaded(settings.chunkSize);
 						}
 						// 若队列还有分块，则继续上传
 						if (chunkArray.length > 0) {
 							uploadChunk();
 						} else {
-							console.log(uploadInfoStorage);
+							// console.log(uploadInfoStorage);
 							uploadComplete();
 						}
 					}
@@ -579,8 +679,8 @@ var VideoUpload = (function($) {
 		}// end of uploadChunk()
 
 		/**
-		 * 所有分块上传完成后, 将所有文件分块的信息传给亦云视频，通知亦云视频对所有文件分块进行验证, 验证通过后合并文件, 
-		 * 至此, 本次上传成功, 视频转码自动开始。如果分块文件验证不通过, 则上传失败。//TODO 合并超时
+		 * 所有分块上传完成后, 将所有文件分块的信息传给亦云视频，通知亦云视频对所有文件分块进行验证, 验证通过后合并文件, 至此, 本次上传成功,
+		 * 视频转码自动开始。如果分块文件验证不通过, 则上传失败。//TODO 合并超时
 		 */
 		function uploadComplete() {
 			var completeParas = {
@@ -598,7 +698,7 @@ var VideoUpload = (function($) {
 				completeParas.time = edata.time;
 				completeParas.sign = edata.sign;
 				$.post(settings.completeUrl, completeParas, function(data) {
-					console.log(data);
+					// console.log(data);
 					if (data.statusCode != 0) {
 						handlers.onUploadError(fileItem);
 						return false;

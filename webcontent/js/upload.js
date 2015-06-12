@@ -20,7 +20,7 @@
 	 */
 	var uploader = VideoUpload.init({
 		// 计算签名sign的url, 请参考demo的webcontent/WEB-INF/web.xml文件中关于SignServlet的配置
-		signUrl : '/upload/sign',
+		signUrl : '/html5/sign',
 		
 		// 浏览文件的按钮id, the <input type='file'> element, #uploadFile
 		fileElement : '#uploadFile',
@@ -46,18 +46,23 @@
 		
 		/**
 		 * 上传开始, 更新状态为扫描
+		 */			
+		onStart: function(fileItem) {
+			$('#' + fileItem.fileItemId).find(".status").text("扫描");
+		},
+		
+		/**
+		 * 扫描完成，开始正式上传
 		 */
 		onUploadStart : function(fileItem) {
-			$('#' + fileItem.fileItemId).find(".status").text("扫描");
+			$('#' + fileItem.fileItemId).find(".status").text('上传中');
 		},
 		
 		/**
 		 * 更新进度。实时更新上传文件进度，更新状态为上传中。这里使用默认提供的上传进度条样式。
 		 */
 		onProgress : function(fileItem, percentage) {
-			var $fileItem = $('#' + fileItem.fileItemId);
-			$fileItem.find(".pispower_upload_progress_bar").css('width', percentage + '%');
-			$fileItem.find(".status").text('上传中');
+			$('#' + fileItem.fileItemId).find(".pispower_upload_progress_bar").css('width', percentage + '%');
 		},
 		
 		/**
