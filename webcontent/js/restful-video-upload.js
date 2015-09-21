@@ -47,12 +47,12 @@ var VideoUpload = (function($) {
 		// 上传文件块的大小, 单位字节, 默认2MB
 		chunkSize : 2 * 1024 * 1024,
 
-		// 亦云视频接受的文件上传的格式。用户可以配置为这个集合的子集，不能添加其他格式。
+		// 鸿瑞云视频接受的文件上传的格式。用户可以配置为这个集合的子集，不能添加其他格式。
 		accept : [ '.avi', '.flv', '.mp4', '.mpeg', '.mpg', '.wmv', '.mkv', '.mts', '.wav', '.flac', '.ape', '.mp3',
 				'.wma', '.m4a', '.aac' ],
 
 		/*
-		 * 设置上传文件的分类id, 可选, 没有指定则为'默认'分类。可以利用亦云视频关于分类的restful api查询分类的id。
+		 * 设置上传文件的分类id, 可选, 没有指定则为'默认'分类。可以利用鸿瑞云视频关于分类的restful api查询分类的id。
 		 * 若在初始化时不确定，可以在uploader中调用setCatalogId()设置。
 		 */
 		catalogId : '',
@@ -86,13 +86,13 @@ var VideoUpload = (function($) {
 		}
 	}; // end of settings
 
-	// 亦云视频的域名
-	var videoApiDomain = "https://video.pispower.com";
+	// 鸿瑞云视频的域名
+	var videoApiDomain = "https://video.cloudak47.com";
 
 	// 默认配置, 不可修改
 	var defaultSettings = {
 
-		// 亦云视频断点续传的restful api
+		// 鸿瑞云视频断点续传的restful api
 		// 查询文件是否已经初始化
 		listUrl : videoApiDomain + "/video/multipartUpload/list.api",
 
@@ -105,7 +105,7 @@ var VideoUpload = (function($) {
 		// 查询已经上传成功的文件分块
 		getPartsUrl : videoApiDomain + "/video/multipartUpload/getParts.api",
 
-		// 上传完成, 通知亦云视频合并文件
+		// 上传完成, 通知鸿瑞云视频合并文件
 		completeUrl : videoApiDomain + "/video/multipartUpload/complete.api",
 
 		// 删除错误文件分片
@@ -379,7 +379,7 @@ var VideoUpload = (function($) {
 	}
 
 	/**
-	 * 文件分块信息对象，记录文件分块的序号和md5值。 根据亦云视频断点续传的api, 每上传完一个文件分块,
+	 * 文件分块信息对象，记录文件分块的序号和md5值。 根据鸿瑞云视频断点续传的api, 每上传完一个文件分块,
 	 * 即会返回一个partKey和partMD5用以标识这个分块和验证上传的文件分块是否正确。 但并不会返回这个分块的序号,
 	 * 因此用户需要自己记录分块的序号。同时，上传成功后，要记录这个分块的partKey。
 	 */
@@ -447,7 +447,7 @@ var VideoUpload = (function($) {
 		}
 
 		/**
-		 * 初始化断点续传, 亦云视频会返回一个uploadId, 用以标识本次上传 初始化成功后随即上传
+		 * 初始化断点续传, 鸿瑞云视频会返回一个uploadId, 用以标识本次上传 初始化成功后随即上传
 		 */
 		function initUpload() {
 			$.ocv.post(settings.initUrl, {
@@ -496,7 +496,7 @@ var VideoUpload = (function($) {
 					handlers.onUploadError(fileItem);
 					return false;
 				}
-				// 从亦云视频查询上传完成的分块，与本地文件分块比较，找到断开的那个分块的序号
+				// 从鸿瑞云视频查询上传完成的分块，与本地文件分块比较，找到断开的那个分块的序号
 				serverInfo = data.uploadedParts;
 				// console.log("uploaded parts..." + serverInfo);
 				if (!serverInfo.length) {
@@ -564,9 +564,9 @@ var VideoUpload = (function($) {
 		}
 
 		/**
-		 * 上传一块。 每上传完一块，亦云视频会返回接收到的文件分块的md5，然后判断与刚才上传的文件分块是否一致。
+		 * 上传一块。 每上传完一块，鸿瑞云视频会返回接收到的文件分块的md5，然后判断与刚才上传的文件分块是否一致。
 		 * 若一致，则表明分块上传成功；否则，将分块重新放回队列中。
-		 * 同时亦云视频会返回文件分块的partKey，必须要记录下来，用于最后合并文件的验证。
+		 * 同时鸿瑞云视频会返回文件分块的partKey，必须要记录下来，用于最后合并文件的验证。
 		 */
 		function uploadChunk() {
 			var chunkInfo = chunkArray.shift();
@@ -577,7 +577,7 @@ var VideoUpload = (function($) {
 
 			$.ocv.postFile(settings.uploadPartUrl, {
 				uploadId : fileItem.uploadId,
-				partNumber : currentChunk + 1	// 亦云视频的分块序号是从1开始，而这里是从0开始，因此要+1
+				partNumber : currentChunk + 1	// 鸿瑞云视频的分块序号是从1开始，而这里是从0开始，因此要+1
 			}, sliceFile(file, begin, end), function(data) {
 				if (data.statusCode != 0) {
 					handlers.onUploadError(fileItem);
@@ -606,7 +606,7 @@ var VideoUpload = (function($) {
 		}// end of uploadChunk()
 
 		/**
-		 * 所有分块上传完成后, 将所有文件分块的信息传给亦云视频，通知亦云视频对所有文件分块进行验证, 验证通过后合并文件, 至此, 本次上传成功,
+		 * 所有分块上传完成后, 将所有文件分块的信息传给鸿瑞云视频，通知鸿瑞云视频对所有文件分块进行验证, 验证通过后合并文件, 至此, 本次上传成功,
 		 * 视频转码自动开始。如果分块文件验证不通过, 则上传失败。//TODO 合并超时
 		 */
 		function uploadComplete() {

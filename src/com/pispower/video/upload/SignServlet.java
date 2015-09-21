@@ -30,7 +30,7 @@ import org.apache.log4j.Logger;
 /**
  * 这个类用于计算签名。
  * 每次rest请求都必须带上签名sign，以验证身份和保证参数的正确。
- * 根据亦云视频restfult api的规则计算签名，并返回accessKey、time和sign。
+ * 根据鸿瑞云视频restfult api的规则计算签名，并返回accessKey、time和sign。
  *
  */
 public class SignServlet extends HttpServlet
@@ -40,11 +40,11 @@ public class SignServlet extends HttpServlet
 	private final Logger log = Logger.getLogger(this.getClass());
 	
 	/**
-	 * 用户在亦云视频上的access key和access secret，请参考开发者支持页面。
+	 * 用户在鸿瑞云视频上的access key和access secret，请参考开发者支持页面。
 	 */
-	private final static String ACCESS_KEY = "4bnpu2hy8awcva";
+	private final static String ACCESS_KEY = "";
 	
-	private final static String ACCESS_SECRET = "34299bb0f768b2a3c18686725c9766f6";
+	private final static String ACCESS_SECRET = "";
 	
 	@Override
 	protected void doPost(HttpServletRequest req, HttpServletResponse resp)

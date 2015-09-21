@@ -26,7 +26,7 @@ import net.sf.json.JSONObject;
 import org.apache.log4j.Logger;
 
 /**
- * 用于监听回调，亦云视频目前在三种情况下会回调：
+ * 用于监听回调，鸿瑞云视频目前在三种情况下会回调：
  * 1 转码成功
  * 2 转码失败
  * 3 断点续传失败
@@ -39,7 +39,7 @@ public class CallbackListenerServlet extends HttpServlet
 	private final Logger log = Logger.getLogger(this.getClass());
 	
 	/**
-	 * 亦云视频以get的方式回调用户
+	 * 鸿瑞云视频以get的方式回调用户
 	 */
 	@Override
 	protected void doGet(HttpServletRequest req, HttpServletResponse resp)
@@ -73,7 +73,7 @@ public class CallbackListenerServlet extends HttpServlet
 		log.debug("notifyEventType : " + json.get("notifyEventType"));
 		log.debug("message : " + json.get("message"));
 		
-		// 返回yes，通知亦云视频已经回调成功
+		// 返回yes，通知鸿瑞云视频已经回调成功
 		PrintWriter writer = resp.getWriter();
 		writer.print("yes");
 		writer.close();
