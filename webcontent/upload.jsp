@@ -40,6 +40,7 @@
 	</div>
 	<script type="text/javascript" src="<c:url value="/js/jquery-1.11.1.min.js" />"></script>
 	<script type="text/javascript" src="<c:url value="/js/spark-md5.min.js" />"></script>
+	<script type="text/javascript" src="<c:url value="/js/onecloud-restful.js" />"></script>
 	<script type="text/javascript" src="<c:url value="/js/restful-video-upload.js" />"></script>
 	<script type="text/javascript" src="<c:url value="/js/upload.js" />"></script>
 </body>

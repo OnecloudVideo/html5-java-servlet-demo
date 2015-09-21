@@ -19,9 +19,6 @@
 	 * 初始化VideoUpload
 	 */
 	var uploader = VideoUpload.init({
-		// 计算签名sign的url, 请参考demo的webcontent/WEB-INF/web.xml文件中关于SignServlet的配置
-		signUrl : '/html5/sign',
-		
 		// 浏览文件的按钮id, the <input type='file'> element, #uploadFile
 		fileElement : '#uploadFile',
 		

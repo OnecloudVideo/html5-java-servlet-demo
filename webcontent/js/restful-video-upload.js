@@ -26,9 +26,6 @@ var VideoUpload = (function($) {
 
 	// 基本配置
 	var settings = {
-		// 计算签名sign的url, 需要用户自己配置, 必填
-		signUrl : '',
-
 		// 选择文件的按钮id, 必填, the <input type='file'> element, #uploadFile
 		fileElement : '',
 
@@ -206,19 +203,13 @@ var VideoUpload = (function($) {
 		},
 		// 查询分类, 查询成功后回调success，查询失败则回调fail
 		getClassify : function(success, fail) {
-			var param = {};
-			getSign(param, function(sdata) {
-				param.accessKey = sdata.accessKey;
-				param.time = sdata.time;
-				param.sign = sdata.sign;
-				$.get(settings.getClassifyUrl, param, function(data) {
-					if (data.statusCode != 0) {
-						// console.log("get classify fail");
-						fail();
-					} else {
-						success(data);
-					}
-				});
+			$.ocv.get(settings.getClassifyUrl, {}, function(data) {
+				if (data.statusCode == 0) {
+					success(data);
+				} else {
+					// console.log("get classify fail");
+					fail();
+				}
 			});
 		}
 	}
@@ -311,7 +302,7 @@ var VideoUpload = (function($) {
 		onUploadError : function(fileItem) {
 			settings.onUploadError(fileItem);
 			fileItem = null;
-			this.onUploadStart();
+			this.onStart();
 		},
 		/**
 		 * 取消上传
@@ -388,21 +379,6 @@ var VideoUpload = (function($) {
 	}
 
 	/**
-	 * 计算参数签名sign函数, 成功后调callback
-	 */
-	function getSign(formData, callback) {
-		$.post(settings.signUrl, formData, function(data, status) {
-			if (status == "success") {
-				callback(data);
-			} else {
-				// console.log("get sign fail")
-				// console.log(jqXHR);
-				throw new Error("can't get sign");
-			}
-		});
-	}
-
-	/**
 	 * 文件分块信息对象，记录文件分块的序号和md5值。 根据亦云视频断点续传的api, 每上传完一个文件分块,
 	 * 即会返回一个partKey和partMD5用以标识这个分块和验证上传的文件分块是否正确。 但并不会返回这个分块的序号,
 	 * 因此用户需要自己记录分块的序号。同时，上传成功后，要记录这个分块的partKey。
@@ -455,26 +431,18 @@ var VideoUpload = (function($) {
 		 */
 		function startUpload() {
 			// console.log(chunkArray);
-			getSign({
+			$.ocv.get(settings.listUrl, {
 				fileMD5Equal : md5String
-			}, function(edata) {
-				// console.log(edata);
-				$.get(settings.listUrl, {
-					fileMD5Equal : md5String,
-					accessKey : edata.accessKey,
-					time : edata.time,
-					sign : edata.sign
-				}, function(data) {
-					// console.log(data);
-					if (data.multipartUploads.length == 0) {
-						initUpload();
-					} else if (data.multipartUploads.length == 1) {
-						fileItem.uploadId = data.multipartUploads[0].uploadId;
-						continueUpload();
-					} else {
-						// console.log("continue upload same files");
-					}
-				});
+			}, function(data) {
+				// console.log(data);
+				if (data.multipartUploads.length == 0) {
+					initUpload();
+				} else if (data.multipartUploads.length == 1) {
+					fileItem.uploadId = data.multipartUploads[0].uploadId;
+					continueUpload();
+				} else {
+					// console.log("continue upload same files");
+				}
 			});
 		}
 
@@ -482,24 +450,16 @@ var VideoUpload = (function($) {
 		 * 初始化断点续传, 亦云视频会返回一个uploadId, 用以标识本次上传 初始化成功后随即上传
 		 */
 		function initUpload() {
-			getSign({
+			$.ocv.post(settings.initUrl, {
 				fileName : file.name,
 				fileMD5 : md5String
-			}, function(edata) {
-				$.post(settings.initUrl, {
-					fileName : file.name,
-					fileMD5 : md5String,
-					accessKey : edata.accessKey,
-					time : edata.time,
-					sign : edata.sign
-				}, function(data) {
-					if (data.uploadId) {
-						fileItem.uploadId = data.uploadId;
-						uploadChunk();
-					} else {
-						handlers.onUploadError(fileItem);
-					}
-				});
+			}, function(data) {
+				if (data.uploadId) {
+					fileItem.uploadId = data.uploadId;
+					uploadChunk();
+				} else {
+					handlers.onUploadError(fileItem);
+				}
 			});
 		}
 
@@ -529,82 +489,60 @@ var VideoUpload = (function($) {
 		 * 计算上次断开的分块进行续传
 		 */
 		function continueUpload() {
-			getSign({
+			$.ocv.get(settings.getPartsUrl, {
 				uploadId : fileItem.uploadId
-			}, function(edata) {
-				$.get(settings.getPartsUrl, {
-					uploadId : fileItem.uploadId,
-					accessKey : edata.accessKey,
-					time : edata.time,
-					sign : edata.sign
-				}, function(data) {
-					if (data.statusCode != 0) {
-						handlers.onUploadError(fileItem);
-						return false;
-					}
-					// 从亦云视频查询上传完成的分块，与本地文件分块比较，找到断开的那个分块的序号
-					serverInfo = data.uploadedParts;
-					// console.log("uploaded parts..." + serverInfo);
-					if (!serverInfo.length) {
-						uploadChunk();
-						return;
-					}
-					// 记录服务器上错误的 partKey，有可能是因为上传到一半，有可能是因为改变了大小导致不一致。
-					var errorParts = $.map(serverInfo, function(ele) {
-						return ele.partKey;
-					});
+			}, function(data) {
+				if (data.statusCode != 0) {
+					handlers.onUploadError(fileItem);
+					return false;
+				}
+				// 从亦云视频查询上传完成的分块，与本地文件分块比较，找到断开的那个分块的序号
+				serverInfo = data.uploadedParts;
+				// console.log("uploaded parts..." + serverInfo);
+				if (!serverInfo.length) {
+					uploadChunk();
+					return;
+				}
+				// 记录服务器上错误的 partKey，有可能是因为上传到一半，有可能是因为改变了大小导致不一致。
+				var errorParts = $.map(serverInfo, function(ele) {
+					return ele.partKey;
+				});
 
-					// console.log(serverInfo);
-					var parts = [];
-					for (var k = 0, clen = chunkArray.length; k < clen; k++) {
-						for (var j = 0, slen = serverInfo.length; j < slen; j++) {
-							var serverChunk = serverInfo[j];
-							if (serverChunk.partMD5 == chunkArray[k].md5
-							// 服务器 1 base, 当前算法 0 base
-							&& serverChunk.partNumber == (chunkArray[k].partNum + 1)) {
-								chunkArray[k].partKey = serverInfo[j].partKey;
-								uploadInfoStorage.push(chunkArray[k]);
-								// 如果服务器上的正确，从错误里删除
-								errorParts = $.map(errorParts, function(ele) {
-									if (ele != serverChunk.partKey)
-										return ele;
-								});
-								break;
-							}
-							if (j == slen - 1) {
-								parts.push(chunkArray[k]);
-							}
+				// console.log(serverInfo);
+				var parts = [];
+				for (var k = 0, clen = chunkArray.length; k < clen; k++) {
+					for (var j = 0, slen = serverInfo.length; j < slen; j++) {
+						var serverChunk = serverInfo[j];
+						if (serverChunk.partMD5 == chunkArray[k].md5
+						// 服务器 1 base, 当前算法 0 base
+						&& serverChunk.partNumber == (chunkArray[k].partNum + 1)) {
+							chunkArray[k].partKey = serverInfo[j].partKey;
+							uploadInfoStorage.push(chunkArray[k]);
+							// 如果服务器上的正确，从错误里删除
+							errorParts = $.map(errorParts, function(ele) {
+								if (ele != serverChunk.partKey)
+									return ele;
+							});
+							break;
+						}
+						if (j == slen - 1) {
+							parts.push(chunkArray[k]);
 						}
 					}
+				}
 
-					// 删除错误的块
-					if (errorParts.length) {
-						console.log("erro parts..." + errorParts);
-						var partKeys = errorParts.toString();
-						getSign({
-							partKeys : partKeys
-						}, function(edata) {
-							$.post(settings.deletePartsUrl, {
-								partKeys : partKeys,
-								accessKey : edata.accessKey,
-								time : edata.time,
-								sign : edata.sign
-							}, function(data) {
-								if (data.statusCode != 0) {
-									handlers.onUploadError(fileItem);
-									return false;
-								}
+				// 删除错误的块
+				if (errorParts.length) {
+//					console.log("erro parts..." + errorParts);
+					var partKeys = errorParts.toString();
+					$.ocv.post(settings.deletePartsUrl, {
+						partKeys : partKeys,
+					}, function(data) {
+						if (data.statusCode != 0) {
+							handlers.onUploadError(fileItem);
+							return false;
+						}
 
-								chunkArray = parts;
-								if (chunkArray.length) {
-									progressUpdater.addUploaded(uploadInfoStorage.length * settings.chunkSize);
-									uploadChunk();
-								} else {
-									uploadComplete();
-								}
-							});
-						});
-					} else {
 						chunkArray = parts;
 						if (chunkArray.length) {
 							progressUpdater.addUploaded(uploadInfoStorage.length * settings.chunkSize);
@@ -612,8 +550,16 @@ var VideoUpload = (function($) {
 						} else {
 							uploadComplete();
 						}
+					});
+				} else {
+					chunkArray = parts;
+					if (chunkArray.length) {
+						progressUpdater.addUploaded(uploadInfoStorage.length * settings.chunkSize);
+						uploadChunk();
+					} else {
+						uploadComplete();
 					}
-				});
+				}
 			});
 		}
 
@@ -626,55 +572,36 @@ var VideoUpload = (function($) {
 			var chunkInfo = chunkArray.shift();
 			var currentChunk = chunkInfo.partNum;
 
-			// console.log("upload chunk : " + currentChunk);
-			var formData = new FormData();
-			formData.append("uploadId", fileItem.uploadId);
-			formData.append("partNumber", (currentChunk + 1)); // 亦云视频的分块序号是从1开始，而这里是从0开始，因此要+1
-
 			var begin = currentChunk * settings.chunkSize;
 			var end = ((begin + settings.chunkSize) > file.size) ? file.size : (begin + settings.chunkSize);
-			formData.append("partFile", sliceFile(file, begin, end));
 
-			getSign({
+			$.ocv.postFile(settings.uploadPartUrl, {
 				uploadId : fileItem.uploadId,
-				partNumber : currentChunk + 1
-			}, function(edata) {
-				formData.append("accessKey", edata.accessKey);
-				formData.append("time", edata.time);
-				formData.append("sign", edata.sign);
-				$.ajax({
-					url : settings.uploadPartUrl,
-					type : "post",
-					data : formData,
-					processData : false,
-					contentType : false,
-					xhr : function() {
-						var xhr = new window.XMLHttpRequest();
-						xhr.upload.addEventListener('progress', progressUpdater.updateProgress, false);
-						return xhr;
-					},
-					success : function(data, status, jqXHR) {
-						if (data.statusCode != 0) {
-							handlers.onUploadError(fileItem);
-							return false;
-						}
+				partNumber : currentChunk + 1	// 亦云视频的分块序号是从1开始，而这里是从0开始，因此要+1
+			}, sliceFile(file, begin, end), function(data) {
+				if (data.statusCode != 0) {
+					handlers.onUploadError(fileItem);
+					return false;
+				}
 
-						if (data.partMD5 != chunkInfo.md5) {
-							chunkArray.push(chunkInfo);
-						} else {
-							chunkInfo.partKey = data.partKey;
-							uploadInfoStorage.push(chunkInfo);
-							progressUpdater.addUploaded(settings.chunkSize);
-						}
-						// 若队列还有分块，则继续上传
-						if (chunkArray.length > 0) {
-							uploadChunk();
-						} else {
-							// console.log(uploadInfoStorage);
-							uploadComplete();
-						}
-					}
-				});
+				if (data.partMD5 != chunkInfo.md5) {
+					chunkArray.push(chunkInfo);
+				} else {
+					chunkInfo.partKey = data.partKey;
+					uploadInfoStorage.push(chunkInfo);
+					progressUpdater.addUploaded(settings.chunkSize);
+				}
+				// 若队列还有分块，则继续上传
+				if (chunkArray.length > 0) {
+					uploadChunk();
+				} else {
+					// console.log(uploadInfoStorage);
+					uploadComplete();
+				}
+			}, function() {
+				var xhr = new window.XMLHttpRequest();
+				xhr.upload.addEventListener('progress', progressUpdater.updateProgress, false);
+				return xhr;
 			});
 		}// end of uploadChunk()
 
@@ -693,18 +620,13 @@ var VideoUpload = (function($) {
 				var partNum = info.partNum + 1;
 				completeParas["part" + partNum] = info.partKey;
 			}
-			getSign(completeParas, function(edata) {
-				completeParas.accessKey = edata.accessKey;
-				completeParas.time = edata.time;
-				completeParas.sign = edata.sign;
-				$.post(settings.completeUrl, completeParas, function(data) {
-					// console.log(data);
-					if (data.statusCode != 0) {
-						handlers.onUploadError(fileItem);
-						return false;
-					}
-					handlers.onUploadComplete(fileItem);
-				});
+			$.ocv.post(settings.completeUrl, completeParas, function(data) {
+				var json = $.parseJSON(data);
+				if (json.statusCode != 0) {
+					handlers.onUploadError(fileItem);
+					return false;
+				}
+				handlers.onUploadComplete(fileItem);
 			});
 		}
 	} // end of uploadFile
